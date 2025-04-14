@@ -32,7 +32,9 @@ function Strategy() {
   const [mean, setMean] = useState(0);
 
   async function fetchData() {
-    getAllModuleItem("bms" as any, "rx0", "pack_sum_volt_", {
+    // put drop down values into parameter of getAllModuleItem
+    if (!choice1 || !choice2 || !choice3) return;
+    getAllModuleItem(choice1 as any, choice2, choice3, {
       createdAt: {
         $gte: "2023-06-30 06:00",
         $lte: "2024-07-2 18:00",
@@ -69,8 +71,6 @@ function Strategy() {
   }
 
   useEffect(() => {
-    fetchData();
-
     telemetry.getAll().then((response) => {
       setFullData(response);
     });
@@ -81,10 +81,10 @@ function Strategy() {
   const [options1, setOptions1] = useState<any>(null);
   const [options2, setOptions2] = useState<any>(null);
   const [options3, setOptions3] = useState<any>(null);
+  const [options4, setOptions4] = useState<any>(null);
   console.log(fullData);
   function update(choice, options, setFn) {
     let fatDict;
-
     if (options == null) return;
 
     if (choice == null) {
@@ -101,13 +101,13 @@ function Strategy() {
       }
     }
     let newOptions: any = [];
+    if (fatDict == null) return;
     Object.entries(fatDict).map(([key, dictValue]) => {
       let element = { label: key, value: dictValue };
       console.log(element);
 
       newOptions.push(element);
     });
-
     setFn(newOptions);
   }
   // First useEffect --> null is passed as choice (b/c it's the first), then fullData is passed as options, then setOptions1 is passed to change options for the
@@ -116,10 +116,18 @@ function Strategy() {
   }, [fullData]);
   useEffect(() => {
     update(choice1, options1, setOptions2);
+    setChoice2(null);
   }, [choice1]);
   useEffect(() => {
     update(choice2, options2, setOptions3);
+    setChoice3(null);
+    fetchData();
   }, [choice2]);
+  useEffect(() => {
+    update(choice3, options3, setOptions4);
+    fetchData();
+  }, [choice3]);
+  console.log(fullData);
 
   return fullData == undefined ? (
     <div>Loading...</div>
@@ -127,16 +135,30 @@ function Strategy() {
     <>
       <Select
         options={options1}
+        value={!choice1 ? null : { label: choice1, value: choice1 }}
         onChange={(choice_select1) => setChoice1(choice_select1?.label)}
       />
-      <Select
-        options={options2}
-        onChange={(choice_select2) => setChoice2(choice_select2?.label)}
-      />
-      <Select
-        options={options3}
-        onChange={(choice_select3) => setChoice3(choice_select3?.label)}
-      />
+      {options2 != null && (
+        <Select
+          options={options2}
+          value={!choice2 ? null : { label: choice2, value: choice2 }}
+          onChange={(choice_select2) => setChoice2(choice_select2?.label)}
+        />
+      )}
+      {options3 != null && options3 !== undefined && options3.length !== 0 && (
+        <Select
+          options={options3}
+          value={!choice3 ? null : { label: choice3, value: choice3 }}
+          onChange={(choice_select3) => setChoice3(choice_select3?.label)}
+        />
+      )}
+      {options4 !== null && options4 !== undefined && options4.length !== 0 && (
+        <Select
+          options={options4}
+          onChange={(choice_select4) => setChoice3(choice_select4?.label)}
+        />
+      )}
+
       <div>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart
@@ -161,7 +183,7 @@ function Strategy() {
             <Legend />
             <Line
               type="monotone"
-              dataKey="pack_sum_volt_"
+              dataKey={choice3 as string}
               stroke="#8884d8"
               data={data}
               activeDot={{ r: 3 }}
